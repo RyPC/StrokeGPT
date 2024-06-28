@@ -17,12 +17,17 @@ const anonymizeMessage = async (message) => {
 
 function App() {
   const [prompt, setPrompt] = useState("");
-  const [cleanPrompt, setCleanPrompt] = useState("");
+  const [chatMessages, setChatMessages] = useState([]);
 
 
   const handleSubmitForm = async () => {
-    const newMessage = await anonymizeMessage(prompt)
-    setCleanPrompt(newMessage);
+    // Clean message of personal information
+    const cleanMessage = await anonymizeMessage(prompt)
+
+    // Clear message from input
+    setPrompt("");
+    setChatMessages([...chatMessages, cleanMessage]);
+    console.log(chatMessages);
   };
   
   const handleKeyDown = async (e) => {
@@ -45,12 +50,18 @@ function App() {
           placeholder='Enter prompt here...'
           onChange={(x) => handlePromptChange(x)}
           autoComplete='off'
+          value={prompt}
         >
         </input>
-        <p
-          id='prompt-output'
-          className='chat-text'
-        >{cleanPrompt}</p>
+        <div
+          id="chat-output"
+        >
+          {chatMessages.map((message) => (
+            <p className='chat-text'>
+              {message}
+            </p>
+          ))}
+        </div>
       </header>
     </div>
   );

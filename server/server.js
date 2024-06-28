@@ -1,7 +1,9 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const nlp = require('compromise')
+const compromise = require('compromise');
+require("dotenv").config();
+const OpenAI = require('openai');
 
 
 // Setting up server
@@ -17,18 +19,41 @@ app.listen(PORT, () => {
 });
 
 
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const openai = new OpenAI({
+    apiKey: OPENAI_API_KEY
+});
+
+
 function redactPersonalInfo(message) {
-    const doc = nlp(message);
+    const doc = compromise(message);
 
-    // Identify and redact person names
-    doc.people().replaceWith('[REDACTED NAME]');
+    // Full name
+    // Social Security number (SSN)
+    // Driver’s license
+    // Mailing address
+    // Credit card information
+    // Passport information
+    // Financial information
+    // Medical records
 
-    doc.match('#ProperNoun+').replaceWith('[REDACTED NAME]');
+    const personalInfo = ["Person" /* Name */, "PhoneNumber", "Address", "Email"];
 
-
+    for (const category of personalInfo) {
+        doc.match(`#${category}+`).replaceWith(`[REDACTED ${category}]`);
+    }
 
     return doc.text();
 }
+
+async function getResponse() { 
+    const assistant = await openai.beta.assistants.create({
+      name: "Math Tutor",
+      instructions: "You are a personal math tutor. Write and run code to answer math questions.",
+      tools: [{ type: "code_interpreter" }],
+      model: "gpt-4o"
+    });
+  }
 
 app.get("/api/redact/:message", (req, res) => {
     res.send({message: redactPersonalInfo(req.params.message)});
