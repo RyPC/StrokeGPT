@@ -19,7 +19,8 @@ app.listen(PORT, () => {
 });
 
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+// const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const OPENAI_API_KEY = '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'
 const openai = new OpenAI({
     apiKey: OPENAI_API_KEY
 });
@@ -37,7 +38,7 @@ function redactPersonalInfo(message) {
     // Financial information
     // Medical records
 
-    const personalInfo = ["Person" /* Name */, "PhoneNumber", "Address", "Email"];
+    const personalInfo = ["Person" /* Name */, "PhoneNumber", "Place", "Email"];
 
     for (const category of personalInfo) {
         doc.match(`#${category}+`).replaceWith(`[REDACTED ${category}]`);
@@ -46,19 +47,98 @@ function redactPersonalInfo(message) {
     return doc.text();
 }
 
-async function getResponse() { 
-    const assistant = await openai.beta.assistants.create({
-      name: "Math Tutor",
-      instructions: "You are a personal math tutor. Write and run code to answer math questions.",
-      tools: [{ type: "code_interpreter" }],
-      model: "gpt-4o"
-    });
-  }
+app.get("/api/chat/:message", async (req, res) => { 
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    try {
+        const assistant = await openai.beta.assistants.create({
+            name: "StrokeGPT",
+            instructions:  `You are a personalized stroke informant. Please respond briefly and with certainty, asking questions when needed. Each response should be easily understood at an 8th grade reading level.`,
+            model: "gpt-4o"
+        });
+
+        const thread = await openai.beta.threads.create();
+
+        const message = await openai.beta.threads.messages.create(
+            thread.id,
+            {
+                role: "user",
+                content: req.params.message
+            }
+        );
+
+        // let responseText = "";
+
+        const run = openai.beta.threads.runs.stream(thread.id, {
+            assistant_id: assistant.id
+        })
+            .on('textCreated', (text) => {
+                res.write('\nassistant > ');
+
+            })
+            .on('textDelta', (textDelta, snapshot) => {
+                res.write(textDelta.value);
+                // responseText+= textDelta.value;
+            })
+            .on('toolCallCreated', (toolCall) => {
+                res.write(`\nassistant > ${toolCall.type}\n\n`);
+            })
+            .on('toolCallDelta', (toolCallDelta, snapshot) => {
+                if (toolCallDelta.type === 'code_interpreter') {
+                    if (toolCallDelta.code_interpreter.input) {
+                        res.write(toolCallDelta.code_interpreter.input);
+                        // responseText+= toolCallDelta.code_interpreter.input
+                    }
+                    if (toolCallDelta.code_interpreter.outputs) {
+                        res.write("\noutput >\n");
+                        toolCallDelta.code_interpreter.outputs.forEach(output => {
+                        if (output.type === "logs") {
+                            res.write(`\n${output.logs}\n`);
+                            // responseText+= output.logs;
+                        }
+                    });
+                    }
+                }
+            })
+            .on("end", () => {
+            res.end();
+            })
+            .on("close", () => {
+                run.abort();
+            });
+        
+        // let run = await openai.beta.threads.runs.createAndPoll(
+        //     thread.id,
+        //     { 
+        //         assistant_id: assistant.id,
+        //         instructions: "Please address the user as Jane Doe. The user has a premium account."
+        //     }
+        // );
+        // if (run.status === 'completed') {
+        //     const messages = await openai.beta.threads.messages.list(
+        //         run.thread_id
+        //     );
+        //     for (const message of messages.data.reverse()) {
+        //         console.log(`${message.role} > ${message.content[0].text.value}`);
+        //     }
+        // }
+        // else {
+        //     console.log(run.status);
+        // }
+    }
+    catch (err) {
+        console.error(err);
+        res.status(500).send("Server error: " + err.message);
+      }
+})
+
+// getResponse();
 
 app.get("/api/redact/:message", (req, res) => {
     res.send({message: redactPersonalInfo(req.params.message)});
 });
-  
+
 /*
 
 // Examples
