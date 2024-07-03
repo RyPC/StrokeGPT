@@ -108,6 +108,15 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
+        <div
+          id="chat-output"
+        >
+          {chatMessages.map((message) => (
+            <p className='chat-text'>
+              {message}
+            </p>
+          ))}
+        </div>
         <input
           id='prompt-input'
           autoFocus
@@ -118,15 +127,6 @@ function App() {
           value={prompt}
         >
         </input>
-        <div
-          id="chat-output"
-        >
-          {chatMessages.map((message) => (
-            <p className='chat-text'>
-              {message}
-            </p>
-          ))}
-        </div>
       </header>
     </div>
   );
