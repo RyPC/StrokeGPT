@@ -20,7 +20,7 @@ app.listen(PORT, () => {
 
 
 // const OPENAI_API_KEY = process.env.OPENAI_API_KEY
-const OPENAI_API_KEY = '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'
+const OPENAI_API_KEY = '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';
 const openai = new OpenAI({
     apiKey: OPENAI_API_KEY
 });
@@ -38,7 +38,7 @@ function redactPersonalInfo(message) {
     // Financial information
     // Medical records
 
-    const personalInfo = ["Person" /* Name */, "PhoneNumber", "Place", "Email"];
+    const personalInfo = ["Person" /* < Name */, "PhoneNumber", "Place", "Email"];
 
     for (const category of personalInfo) {
         doc.match(`#${category}+`).replaceWith(`[REDACTED ${category}]`);
@@ -54,7 +54,10 @@ app.get("/api/chat/:message", async (req, res) => {
     try {
         const assistant = await openai.beta.assistants.create({
             name: "StrokeGPT",
-            instructions:  `You are a personalized stroke informant. Please respond briefly and with certainty, asking questions when needed. Each response should be easily understood at an 8th grade reading level.`,
+            instructions: ("You are a stroke informant API, offering personalized information. " +
+                          "Any question that you ask should be accompanied with up to three general answers. " +
+                          "All responses should follow this formatm: how old are you? [[ANSWER]] < 50 [[ANSWER]] 51-65 [[ANSWER]] 66+ [[END]]. " +
+                          "Respond breifly, as if responding to stroke patients, and always prioritize asking questions rather than giving long answers. "),
             model: "gpt-4o"
         });
 
@@ -72,37 +75,33 @@ app.get("/api/chat/:message", async (req, res) => {
 
         const run = openai.beta.threads.runs.stream(thread.id, {
             assistant_id: assistant.id
-        })
+          })
             .on('textCreated', (text) => {
-                res.write('\nassistant > ');
-
+                process.stdout.write('\nassistant > ')
             })
             .on('textDelta', (textDelta, snapshot) => {
-                res.write(textDelta.value);
-                // responseText+= textDelta.value;
+                process.stdout.write(textDelta.value)
             })
             .on('toolCallCreated', (toolCall) => {
-                res.write(`\nassistant > ${toolCall.type}\n\n`);
+                process.stdout.write(`\nassistant > ${toolCall.type}\n\n`)
             })
             .on('toolCallDelta', (toolCallDelta, snapshot) => {
-                if (toolCallDelta.type === 'code_interpreter') {
-                    if (toolCallDelta.code_interpreter.input) {
-                        res.write(toolCallDelta.code_interpreter.input);
-                        // responseText+= toolCallDelta.code_interpreter.input
-                    }
-                    if (toolCallDelta.code_interpreter.outputs) {
-                        res.write("\noutput >\n");
-                        toolCallDelta.code_interpreter.outputs.forEach(output => {
-                        if (output.type === "logs") {
-                            res.write(`\n${output.logs}\n`);
-                            // responseText+= output.logs;
-                        }
-                    });
-                    }
+              if (toolCallDelta.type === 'code_interpreter') {
+                if (toolCallDelta.code_interpreter.input) { 
+                  process.stdout.write(toolCallDelta.code_interpreter.input);
                 }
+                if (toolCallDelta.code_interpreter.outputs) {
+                  process.stdout.write("\noutput >\n");
+                  toolCallDelta.code_interpreter.outputs.forEach(output => {
+                    if (output.type === "logs") {
+                      process.stdout.write(`\n${output.logs}\n`);
+                    }
+                  });
+                }
+              }
             })
             .on("end", () => {
-            res.end();
+                res.end();
             })
             .on("close", () => {
                 run.abort();
@@ -130,8 +129,8 @@ app.get("/api/chat/:message", async (req, res) => {
     catch (err) {
         console.error(err);
         res.status(500).send("Server error: " + err.message);
-      }
-})
+    }
+});
 
 // getResponse();
 

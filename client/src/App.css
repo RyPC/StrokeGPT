@@ -9,16 +9,65 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+  font-size: 2vmin;
   color: white;
 }
 
 #prompt-input {
+  /* position */
+  position: absolute;
+  bottom: 20px;
+  
+  /* size */
   height: 50px;
-  font-size: 30px;
+  width: 50vw;
+  
+  /* spacing */
+  padding-right: 15px;
+  padding-left: 15px;
+  
+  /* other */
+  border-radius: 25px;
+  font-size: 2vmin;
   outline: none;
+  background-color: #373d48;
+  box-shadow: none;
+  color: white;
+  border: none;
+}
+
+#chat-output {
+  position: absolute;
+  bottom: 90px;
+  height: auto;
   width: 50vw;
 }
 
-.chat-output {
+.chat-bubble-container {
+}
+.input-message-container {
+  text-align: right;
+}
+.output-message-container {
+  text-align: left;
+}
+
+
+.chat-bubble {
+  border-radius: calc(2vmin + 20px);
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 15px;
+  padding-right: 15px;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  display: inline-block;
+}
+.input-message {
+  background-color: #373d48;
+  text-align: right;
+}
+.output-message {
+  background-color: #16181d;
+  text-align: left;
 }
