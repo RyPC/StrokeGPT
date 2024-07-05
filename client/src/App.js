@@ -22,60 +22,29 @@ const anonymizeMessage = async (message) => {
   return "";
 };
 
-// const readableStream = new ReadableStream({
-//   start(controller) {
-//     // Simulate sending data in chunks
-//     for (let i = 1; i <= 5; i++) {
-//       const chunk = `Chunk ${i}\n`;
-//       controller.enqueue(chunk); // Enqueue data into the stream
-//     }
-//     controller.close(); // Signals the end of data
-//   }
-// });
-// const reader = readableStream.getReader();
-
-// async function consumeStream() {
-//   try {
-//     while (true) {
-//       const { done, value } = await reader.read();
-//       if (done) {
-//         console.log('Stream ended.');
-//         break;
-//       }
-//       console.log(value);
-//     }
-//   } catch (error) {
-//     console.error('Error consuming stream:', error);
-//   } finally {
-//     reader.releaseLock(); // Release the lock on the reader
-//   }
-// }
-
-// consumeStream();
-
 function App() {
   const [prompt, setPrompt] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
+  const [thread, setThread] = useState();
 
   useEffect(() => {
   }, [chatMessages]);
 
 
-  const getChatResponse = async (message) => {
+  const getChatResponse = async (message, thread) => {
 
     try {
       const assistant = await openai.beta.assistants.create({
         name: "StrokeGPT",
         instructions: (
-          "You are a stroke informant API, offering personalized information.  " +
-          "Respond breifly, as if friendly responding to stroke patients, and always prioritize asking questions rather than giving long answers. " +
+          "You are a stroke informant API, offering personalized information to answer the users' specific questions.  " +
+          "Respond breifly and friendly, asking questions for any clarifications. " +
           "Any question that you ask should be accompanied with up to three general answers. " +
+          "Allow the users to ask specific questions. " +
           "All responses should follow this example format: how old are you? [[ANSWER]] < 50 [[ANSWER]] 51-65 [[ANSWER]] 66+ [[END]]. "
         ),
         model: "gpt-4o"
       });
-
-      const thread = await openai.beta.threads.create();
 
       const returnMessage = await openai.beta.threads.messages.create(
         thread.id,
@@ -144,6 +113,8 @@ function App() {
           }
         }
       });
+
+      setThread(thread);
     }
     catch (err) {
         console.error(err);
@@ -183,7 +154,7 @@ function App() {
     ]);
 
     // Get response from OpenAI
-    const response = await getChatResponse(cleanMessage);
+    const response = await getChatResponse(cleanMessage, chatMessages.length === 0 ? await openai.beta.threads.create() : thread);
 
     // Add messages to chat
     // setChatMessages([
