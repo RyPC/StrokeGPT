@@ -1,9 +1,11 @@
+html {
+  background-color: #282c34;
+}
 .App {
   text-align: center;
 }
 
 .App-header {
-  background-color: #282c34;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -15,7 +17,7 @@
 
 #prompt-input {
   /* position */
-  position: absolute;
+  /* position: absolute; */
   bottom: 20px;
   
   /* size */
@@ -36,11 +38,14 @@
   border: none;
 }
 
-#chat-output {
-  position: absolute;
+.chat-container {
+  /* position: absolute; */
   bottom: 90px;
-  height: auto;
+  top: 0px;
+  /* height: auto; */
   width: 50vw;
+  overflow-y: scroll;
+  overflow: hidden;
 }
 
 .chat-bubble-container {
@@ -55,8 +60,6 @@
 
 .chat-bubble {
   border-radius: calc(2vmin + 20px);
-  padding-top: 10px;
-  padding-bottom: 10px;
   padding-left: 15px;
   padding-right: 15px;
   margin-top: 15px;
@@ -70,4 +73,29 @@
 .output-message {
   background-color: #16181d;
   text-align: left;
+}
+
+.answer-options-container {
+}
+.answer-option {
+  opacity: 50%;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  background-color: #16181d;
+  margin: 15px;
+  display: inline-block;
+  user-select: none;
+  animation-name: color-pulse;
+  animation-duration: 2s;
+  animation-iteration-count: infinite;
+  transition: opacity 0.5s;
+}
+.answer-option:hover {
+  opacity: 100%;
+}
+
+@keyframes color-pulse {
+  0% {background-color: #373d48;}
+  50% {background-color: #435656;}
+  100% {background-color: #373d48;}
 }
