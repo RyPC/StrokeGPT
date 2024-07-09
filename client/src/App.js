@@ -5,7 +5,7 @@ import './App.css';
 import Markdown from 'react-markdown';
 const OpenAI = require('openai');
 
-const OPENAI_API_KEY = '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';
+const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
 const openai = new OpenAI({
     apiKey: OPENAI_API_KEY,
     dangerouslyAllowBrowser: true
