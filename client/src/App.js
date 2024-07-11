@@ -12,6 +12,7 @@ const openai = new OpenAI({
 });
 const INITIAL_MESSAGE = "How can I assist you today? [[What is a stroke?]] [[I have a specific question about stoke]] [[I want to talk a bit]]";
 
+// Remove any sensitive information before sending to OpenAI
 const anonymizeMessage = async (message) => {
   // construct url for get request
   const getURL = "http://localhost:3001/api/redact/" + encodeURIComponent(message);
@@ -26,24 +27,55 @@ const anonymizeMessage = async (message) => {
 };
 
 function App() {
+  // State variables
+  // Current input
   const [prompt, setPrompt] = useState("");
+  // All previous chat messages
   const [chatMessages, setChatMessages] = useState([{
     type: "output-message",
     contents: "How can I assist you today?"
   }]);
+  // OpenAI thread of current conversation
   const [thread, setThread] = useState();
+  // Current answer options
   const [answerOptions, setAnswerOptions] = useState([
     "What is a stroke?",
     "I have a specific question about stoke",
     "I want to talk a bit",
   ]);
+  const [assistant, setAssistant] = useState();
 
+  // Initialize chat
+  useEffect(() => {
+    const initializeChat = async () => {
+      // Create assistant
+      const newAssistant = await openai.beta.assistants.create({
+        name: "StrokeGPT",
+        instructions: (
+          "You are a stroke informant API, offering personalized information to answer the users' specific questions.  " +
+          "Respond breifly and friendly, asking questions for any clarifications. " +
+          "Every question that you ask should be accompanied with a couple general options. " +
+          "All responses and options should be in the following format: How old are you? [[<50]] [[51-65]] [[66+]]. " +
+          "The user will start by responding to this question: " + INITIAL_MESSAGE + ". "
+        ),
+        model: "gpt-4o",
+        // tools: [{ type: "file_search" }],
+      });
+      setAssistant(newAssistant);
+
+      // Create thread
+      const newThread = await openai.beta.threads.create();
+      setThread(newThread);
+    };
+    initializeChat();
+  }, []);
+  
+  // Forces updated chat messages to allow streaming
   useEffect(() => {
   }, [chatMessages]);
 
-
   // Makes a call to OpenAI API
-  const getChatResponse = async (message, thread) => {
+  const getChatResponse = async (message) => {
     try {
       const updateChatObjects = (message, responseText) => {
         // Separate response message from list of answers
@@ -52,6 +84,7 @@ function App() {
         const answers = [...responseText.matchAll(regexp)].map(answer => answer[1]);
         console.log(responseText);
 
+        // Update chat messages (streaming)
         setChatMessages([
           ...chatMessages,
           createMessageObject(message, true),
@@ -59,19 +92,6 @@ function App() {
         ]);
         setAnswerOptions(answers);
       };
-
-      const assistant = await openai.beta.assistants.create({
-        name: "StrokeGPT",
-        instructions: (
-          "You are a stroke informant API, offering personalized information to answer the users' specific questions.  " +
-          "Respond breifly and friendly, asking questions for any clarifications. " +
-          "Every question that you ask should be accompanied with 2-3 general options. " +
-          "All responses and options should be in the following format: How old are you? [[<50]] [[51-65]] [[66+]]. " +
-          "The user will start by responding to this question: How can I assist you today? [[What is a stroke?]] [[I have a specific question about stoke]] [[I want to talk a bit]]. "
-        ),
-        model: "gpt-4o",
-        // tools: [{ type: "file_search" }],
-      });
 
       const returnMessage = await openai.beta.threads.messages.create(
         thread.id,
@@ -114,19 +134,6 @@ function App() {
     catch (err) {
         console.error(err);
     }
-
-
-    // // construct url for get request
-    // const getURL = "http://localhost:3001/api/chat/" + encodeURIComponent(message);
-    // console.log(getURL);
-  
-    // // Fetch response from server
-    // const response = await axios.get(getURL);
-    // console.log(response);
-    // if (response) {
-    //   return response.data;
-    // }
-    // return "";
   };
 
   
@@ -150,14 +157,8 @@ function App() {
     ]);
 
     // Get response from OpenAI
-    const response = await getChatResponse(cleanMessage, thread === undefined ? await openai.beta.threads.create() : thread);
+    const response = await getChatResponse(cleanMessage);
 
-    // Add messages to chat
-    // setChatMessages([
-    //   ...chatMessages,
-    //   createMessageObject(cleanMessage, true),
-    //   createMessageObject(response, false)
-    // ]);
   };
   
   const handleKeyDown = async (e) => {
