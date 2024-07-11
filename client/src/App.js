@@ -10,6 +10,7 @@ const openai = new OpenAI({
     apiKey: OPENAI_API_KEY,
     dangerouslyAllowBrowser: true
 });
+const INITIAL_MESSAGE = "How can I assist you today? [[What is a stroke?]] [[I have a specific question about stoke]] [[I want to talk a bit]]";
 
 const anonymizeMessage = async (message) => {
   // construct url for get request
@@ -26,9 +27,16 @@ const anonymizeMessage = async (message) => {
 
 function App() {
   const [prompt, setPrompt] = useState("");
-  const [chatMessages, setChatMessages] = useState([]);
+  const [chatMessages, setChatMessages] = useState([{
+    type: "output-message",
+    contents: "How can I assist you today?"
+  }]);
   const [thread, setThread] = useState();
-  const [answerOptions, setAnswerOptions] = useState([]);
+  const [answerOptions, setAnswerOptions] = useState([
+    "What is a stroke?",
+    "I have a specific question about stoke",
+    "I want to talk a bit",
+  ]);
 
   useEffect(() => {
   }, [chatMessages]);
@@ -38,8 +46,8 @@ function App() {
   const getChatResponse = async (message, thread) => {
     try {
       const updateChatObjects = (message, responseText) => {
+        // Separate response message from list of answers
         const responseMessage = responseText.split("[[")[0];
-
         const regexp = /\[\[([^\[\]]*)\]\]/g;
         const answers = [...responseText.matchAll(regexp)].map(answer => answer[1]);
         console.log(responseText);
@@ -58,7 +66,8 @@ function App() {
           "You are a stroke informant API, offering personalized information to answer the users' specific questions.  " +
           "Respond breifly and friendly, asking questions for any clarifications. " +
           "Every question that you ask should be accompanied with 2-3 general options. " +
-          "All responses and options should be in the following format: How old are you? [[<50]] [[51-65]] [[66+]]"
+          "All responses and options should be in the following format: How old are you? [[<50]] [[51-65]] [[66+]]. " +
+          "The user will start by responding to this question: How can I assist you today? [[What is a stroke?]] [[I have a specific question about stoke]] [[I want to talk a bit]]. "
         ),
         model: "gpt-4o",
         // tools: [{ type: "file_search" }],
@@ -141,7 +150,7 @@ function App() {
     ]);
 
     // Get response from OpenAI
-    const response = await getChatResponse(cleanMessage, chatMessages.length === 0 ? await openai.beta.threads.create() : thread);
+    const response = await getChatResponse(cleanMessage, thread === undefined ? await openai.beta.threads.create() : thread);
 
     // Add messages to chat
     // setChatMessages([
