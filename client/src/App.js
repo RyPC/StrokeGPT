@@ -34,12 +34,14 @@ function App() {
   }, [chatMessages]);
 
 
+  // Makes a call to OpenAI API
   const getChatResponse = async (message, thread) => {
     try {
       const updateChatObjects = (message, responseText) => {
-        const deconstructedResponse = responseText.split("[[ANSWER]]");
-        const responseMessage = deconstructedResponse[0];
-        const answers = deconstructedResponse.slice(1);
+        const responseMessage = responseText.split("[[")[0];
+
+        const regexp = /\[\[([^\[\]]*)\]\]/g;
+        const answers = [...responseText.matchAll(regexp)].map(answer => answer[1]);
         console.log(responseText);
 
         setChatMessages([
@@ -56,9 +58,10 @@ function App() {
           "You are a stroke informant API, offering personalized information to answer the users' specific questions.  " +
           "Respond breifly and friendly, asking questions for any clarifications. " +
           "Every question that you ask should be accompanied with 2-3 general options. " +
-          "All responses and options should be in the following format: How old are you? [[ANSWER]] <50 [[ANSWER]] 51-65 [[ANSWER]] 66+"
+          "All responses and options should be in the following format: How old are you? [[<50]] [[51-65]] [[66+]]"
         ),
-        model: "gpt-4o"
+        model: "gpt-4o",
+        // tools: [{ type: "file_search" }],
       });
 
       const returnMessage = await openai.beta.threads.messages.create(
@@ -70,35 +73,27 @@ function App() {
       );
 
       let responseText = "";
+      const addToResponseText = (text) => {
+        responseText += text;
+        updateChatObjects(message, responseText);
+      };
 
       const run = openai.beta.threads.runs.stream(thread.id, {
         assistant_id: assistant.id
       })
-      .on('textCreated', (text) => {
-        responseText += ('\n');
-        updateChatObjects(message, responseText);
-      })
-      .on('textDelta', (textDelta, snapshot) => {
-        responseText += (textDelta.value);
-        updateChatObjects(message, responseText);
-      })
-      .on('toolCallCreated', (toolCall) => {
-        responseText += (`\n${toolCall.type}\n\n`);
-        updateChatObjects(message, responseText);
-      })
+      .on('textCreated', (text) => addToResponseText("\n"))
+      .on('textDelta', (textDelta, snapshot) => addToResponseText(textDelta.value))
+      .on('toolCallCreated', (toolCall) => addToResponseText(`\n${toolCall.type}\n\n`))
       .on('toolCallDelta', (toolCallDelta, snapshot) => {
         if (toolCallDelta.type === 'code_interpreter') {
           if (toolCallDelta.code_interpreter.input) { 
-            responseText += (toolCallDelta.code_interpreter.input);
-            updateChatObjects(message, responseText);
+            addToResponseText(toolCallDelta.code_interpreter.input);
           }
           if (toolCallDelta.code_interpreter.outputs) {
-            responseText += ("\noutput >\n");
-            updateChatObjects(message, responseText);
+            addToResponseText("\noutput >\n");
             toolCallDelta.code_interpreter.outputs.forEach(output => {
               if (output.type === "logs") {
-                responseText += (`\n${output.logs}\n`);
-                updateChatObjects(message, responseText);
+                addToResponseText(`\n${output.logs}\n`);
               }
             });
           }
