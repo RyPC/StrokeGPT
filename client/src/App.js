@@ -74,6 +74,8 @@ function App() {
   useEffect(() => {
   }, [chatMessages]);
 
+  // 
+
   // Makes a call to OpenAI API
   const getChatResponse = async (message) => {
     try {
@@ -86,9 +88,9 @@ function App() {
 
         // Update chat messages (streaming)
         setChatMessages([
-          ...chatMessages,
+          createMessageObject(responseMessage, false),
           createMessageObject(message, true),
-          createMessageObject(responseMessage, false)
+          ...chatMessages,
         ]);
         setAnswerOptions(answers);
       };
@@ -152,8 +154,8 @@ function App() {
     setPrompt("");
     setAnswerOptions([]);
     setChatMessages([
-      ...chatMessages,
       createMessageObject(cleanMessage, true),
+      ...chatMessages,
     ]);
 
     // Get response from OpenAI
@@ -173,8 +175,24 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <div className="chat-container" >
+      {/* Chat messages */}
+      <div className="chat-container" >
+        {/* <div className="chat-messages-container"> */}
+        {/* </div> */}
+        {/* Answer options */}
+        <div className="answer-options-container">
+          {answerOptions.map((option) => (
+            <div
+            className="chat-bubble answer-option"
+            onClick={() => {
+              handleSubmitForm(option);
+              setAnswerOptions([]);
+            }}
+            >
+              {option}
+            </div>
+          ))}
+        </div>
           {chatMessages.map((message) => (
             <div className={"chat-bubble-container " + message.type + "-container"}>
               <div className={"chat-bubble " + message.type}>
@@ -184,31 +202,20 @@ function App() {
               </div>
             </div>
           ))}
-          <div className="answer-options-container">
-            {answerOptions.map((option) => (
-              <div
-                className="chat-bubble answer-option"
-                onClick={() => {
-                  handleSubmitForm(option);
-                  setAnswerOptions([]);
-                }}
-              >
-                {option}
-              </div>
-            ))}
-          </div>
-        </div>
-        <input
-          id='prompt-input'
-          autoFocus
-          onKeyDown={handleKeyDown}
-          placeholder='Enter prompt here...'
-          onChange={(x) => handlePromptChange(x)}
-          autoComplete='off'
-          value={prompt}
-        >
-        </input>
-      </header>
+        {/* Footer for auto scroll */}
+        {/* <div className="footer"></div> */}
+      </div>
+      {/* Input */}
+      <input
+        id='prompt-input'
+        autoFocus
+        onKeyDown={handleKeyDown}
+        placeholder='Enter prompt here...'
+        onChange={(x) => handlePromptChange(x)}
+        autoComplete='off'
+        value={prompt}
+      >
+      </input>
     </div>
   );
 }

@@ -3,9 +3,6 @@ html {
 }
 .App {
   text-align: center;
-}
-
-.App-header {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -13,11 +10,26 @@ html {
   justify-content: center;
   font-size: 2vmin;
   color: white;
+  /* flex-direction: column-reverse; */
+}
+
+.chat-container {
+  top: 0px;
+  /* height: auto; */
+  width: 50vw;
+  overflow-y: scroll;
+  overflow: hidden;
+  margin-bottom: 90px;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.chat-messages-container {
 }
 
 #prompt-input {
   /* position */
-  /* position: absolute; */
+  position: fixed;
   bottom: 20px;
   
   /* size */
@@ -36,16 +48,6 @@ html {
   box-shadow: none;
   color: white;
   border: none;
-}
-
-.chat-container {
-  /* position: absolute; */
-  bottom: 90px;
-  top: 0px;
-  /* height: auto; */
-  width: 50vw;
-  overflow-y: scroll;
-  overflow: hidden;
 }
 
 .chat-bubble-container {
