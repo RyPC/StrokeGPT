@@ -53,10 +53,9 @@ function App() {
         name: "StrokeGPT",
         instructions: (
           "You are a stroke informant API, offering personalized information to answer the users' specific questions.  " +
-          "Respond breifly and friendly, asking questions for any clarifications. " +
+          "Respond breifly, asking questions for any clarifications. " +
           "Every question that you ask should be accompanied with a couple general options. " +
-          "All responses and options should be in the following format: How old are you? [[<50]] [[51-65]] [[66+]]. " +
-          "The user will start by responding to this question: " + INITIAL_MESSAGE + ". "
+          "All responses and options should be in the following format: How old are you? [[<50]] [[51-65]] [[66+]]. " 
         ),
         model: "gpt-4o",
         // tools: [{ type: "file_search" }],
@@ -64,9 +63,17 @@ function App() {
       setAssistant(newAssistant);
 
       // Create thread
-      const newThread = await openai.beta.threads.create();
+      const newThread = await openai.beta.threads.create({
+        messages: [
+          {
+            role: "user",
+            content: INITIAL_MESSAGE
+          }
+        ]
+      });
       setThread(newThread);
     };
+    
     initializeChat();
   }, []);
   
