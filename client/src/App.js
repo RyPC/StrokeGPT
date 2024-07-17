@@ -66,7 +66,7 @@ function App() {
       const newThread = await openai.beta.threads.create({
         messages: [
           {
-            role: "user",
+            role: "assistant",
             content: INITIAL_MESSAGE
           }
         ]
