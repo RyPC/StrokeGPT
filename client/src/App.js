@@ -53,10 +53,13 @@ function App() {
         instructions: (
           `You are a stroke informant API, offering personalized information to answer the users' specific questions.  ` +
           `Respond breifly, asking questions for any clarifications. ` +
-          `Every question that you ask should be accompanied with a couple general options. ` +
-          `All responses and options should be in the following json format: {"response": "How old are you?", "answers": ["<50", "51-65", "66+"]}`
+          `Every question that you ask should be accompanied with a couple general answer options. ` +
+          `Key information only about the user's condition and health can also be recorded, but can be left blank. ` +
+          `All responses and options should be in the following json format: ` +
+          `{"response": "How old are you?", "answers": ["<50", "51-65", "66+"], "user_info": "Had ischemic stroke 3 years ago."}`
         ),
         model: "gpt-4o",
+        response_format: { "type": "json_object" },
         // tools: [{ type: "file_search" }],
       });
       setAssistant(newAssistant);
@@ -94,7 +97,7 @@ function App() {
     }
   
     // Ignore correct inputs
-    if (json.endsWith('}')) {
+    if (json.trim().endsWith('}')) {
       return json;
     }
     // Empty inputs
@@ -103,7 +106,7 @@ function App() {
     }
   
     // Try to fix via adding on
-    const additions = [`": ""}`, `""}`, `"}`, `"": ""}`, `"]}`, `""]}`, `}`];
+    const additions = [`": ""}`, `""}`, `"}`, `"": ""}`, `"]}`, `""]}`, `]}`, `}`];
   
     let validJSON = "";
     additions.forEach((addition) => {
@@ -121,13 +124,15 @@ function App() {
     try {
       const updateChatObjects = (message, responseText) => {
         // Convert to JSON
+          // console.log(`INPUT: ${responseText}`);
         responseText = fixJSON(responseText);
-        console.log(responseText);
+          // console.log(`OUTPUT: ${responseText}`);
         const responseJSON = JSON.parse(responseText);
-        // Separate response message from list of answers
+        // Separate response components
         const responseMessage = responseJSON["response"] || "";
         const answers = responseJSON["answers"] || [];
-        console.log(responseText);
+        const user_info = responseJSON["user_info"] || "";
+        console.log(user_info);
 
         // Update chat messages (streaming)
         setChatMessages([
