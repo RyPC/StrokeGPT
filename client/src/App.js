@@ -10,8 +10,7 @@ const openai = new OpenAI({
     apiKey: OPENAI_API_KEY,
     dangerouslyAllowBrowser: true
 });
-const INITIAL_MESSAGE = "How can I assist you today? [[What is a stroke?]] [[I have a specific question about stoke]] [[I want to talk a bit]]";
-
+const INITIAL_MESSAGE = `{"response": "How can I assist you today?", "answers": ["What is a stroke?", "I have a specific question about stoke", "I want to talk a bit"]} `;
 // Remove any sensitive information before sending to OpenAI
 const anonymizeMessage = async (message) => {
   // construct url for get request
@@ -52,10 +51,10 @@ function App() {
       const newAssistant = await openai.beta.assistants.create({
         name: "StrokeGPT",
         instructions: (
-          "You are a stroke informant API, offering personalized information to answer the users' specific questions.  " +
-          "Respond breifly, asking questions for any clarifications. " +
-          "Every question that you ask should be accompanied with a couple general options. " +
-          "All responses and options should be in the following format: How old are you? [[<50]] [[51-65]] [[66+]]. " 
+          `You are a stroke informant API, offering personalized information to answer the users' specific questions.  ` +
+          `Respond breifly, asking questions for any clarifications. ` +
+          `Every question that you ask should be accompanied with a couple general options. ` +
+          `All responses and options should be in the following json format: {"response": "How old are you?", "answers": ["<50", "51-65", "66+"]}`
         ),
         model: "gpt-4o",
         // tools: [{ type: "file_search" }],
@@ -81,16 +80,53 @@ function App() {
   useEffect(() => {
   }, [chatMessages]);
 
-  // 
+  // Fixes any broken json, allowing it to work with streaming responses
+  function fixJSON(json) {
+    // Checker for valid JSON
+    function isValidJSON(testJSON) {
+      try {
+        JSON.parse(testJSON);
+        return true;
+      }
+      catch (error) {
+        return false;
+      }
+    }
+  
+    // Ignore correct inputs
+    if (json.endsWith('}')) {
+      return json;
+    }
+    // Empty inputs
+    if (json.trim() == "") {
+      return `{}`;
+    }
+  
+    // Try to fix via adding on
+    const additions = [`": ""}`, `""}`, `"}`, `"": ""}`, `"]}`, `""]}`, `}`];
+  
+    let validJSON = "";
+    additions.forEach((addition) => {
+      const testJSON = json + addition;
+      if (isValidJSON(testJSON)) {
+        validJSON = testJSON;
+      }
+    });
+  
+    return validJSON;
+  }
 
   // Makes a call to OpenAI API
   const getChatResponse = async (message) => {
     try {
       const updateChatObjects = (message, responseText) => {
+        // Convert to JSON
+        responseText = fixJSON(responseText);
+        console.log(responseText);
+        const responseJSON = JSON.parse(responseText);
         // Separate response message from list of answers
-        const responseMessage = responseText.split("[[")[0];
-        const regexp = /\[\[([^\[\]]*)\]\]/g;
-        const answers = [...responseText.matchAll(regexp)].map(answer => answer[1]);
+        const responseMessage = responseJSON["response"] || "";
+        const answers = responseJSON["answers"] || [];
         console.log(responseText);
 
         // Update chat messages (streaming)
