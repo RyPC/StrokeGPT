@@ -55,10 +55,11 @@ function App() {
           `Respond breifly, asking questions for any clarifications. ` +
           `Every question that you ask should be accompanied with a couple general answer options. ` +
           `Key information only about the user's condition and health can also be recorded, but can be left blank. ` +
+          `Using markdown for response is allowed.` +
           `All responses and options should be in the following json format: ` +
           `{"response": "How old are you?", "answers": ["<50", "51-65", "66+"], "user_info": "Had ischemic stroke 3 years ago."}`
         ),
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         response_format: { "type": "json_object" },
         // tools: [{ type: "file_search" }],
       });
