@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 import './App.css';
 import Markdown from 'react-markdown';
+
 const OpenAI = require('openai');
 
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
@@ -10,17 +11,29 @@ const openai = new OpenAI({
     apiKey: OPENAI_API_KEY,
     dangerouslyAllowBrowser: true
 });
+
 const INITIAL_MESSAGE = `{"response": "How can I assist you today?", "answers": ["What is a stroke?", "I have a specific question about stoke", "I want to talk a bit"]} `;
 // Remove any sensitive information before sending to OpenAI
 const anonymizeMessage = async (message) => {
   // construct url for get request
   const getURL = "http://localhost:3001/api/redact/" + encodeURIComponent(message);
-  console.log(getURL);
 
   // Fetch response from server
   const response = await axios.get(getURL);
   if (response) {
     return response.data.message;
+  }
+  return "";
+};
+
+const getInstructions = async () => {
+  // construct url for get request
+  const getURL = "http://localhost:3001/api/instructions";
+
+  // Fetch response from server
+  const response = await axios.get(getURL);
+  if (response) {
+    return response.data;
   }
   return "";
 };
@@ -47,18 +60,13 @@ function App() {
   // Initialize chat
   useEffect(() => {
     const initializeChat = async () => {
+      // Get instructions from server
+      const INSTRUCTIONS = await getInstructions();
+
       // Create assistant
       const newAssistant = await openai.beta.assistants.create({
         name: "StrokeGPT",
-        instructions: (
-          `You are a stroke informant API, offering personalized information to answer the users' specific questions.  ` +
-          `Respond breifly, asking questions for any clarifications. ` +
-          `Every question that you ask should be accompanied with a couple general answer options. ` +
-          `Key information only about the user's condition and health can also be recorded, but can be left blank. ` +
-          `Using markdown for response is allowed.` +
-          `All responses and options should be in the following json format: ` +
-          `{"response": "How old are you?", "answers": ["<50", "51-65", "66+"], "user_info": "Had ischemic stroke 3 years ago."}`
-        ),
+        instructions: INSTRUCTIONS,
         model: "gpt-4o-mini",
         response_format: { "type": "json_object" },
         // tools: [{ type: "file_search" }],
