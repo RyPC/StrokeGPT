@@ -68,8 +68,13 @@ function App() {
         name: "StrokeGPT",
         instructions: INSTRUCTIONS,
         model: "gpt-4o-mini",
-        response_format: { "type": "json_object" },
-        // tools: [{ type: "file_search" }],
+        // response_format: { "type": "json_object" },
+        tools: [{ type: "file_search" }],
+        tool_resources: {
+          "file_search": {
+            "vector_store_ids": ["vs_3ma57mdNEcSijAQvQi68FULs"]
+          }
+        }
       });
       setAssistant(newAssistant);
 
@@ -78,7 +83,7 @@ function App() {
         messages: [
           {
             role: "assistant",
-            content: INITIAL_MESSAGE
+            content: INITIAL_MESSAGE,
           }
         ]
       });
@@ -105,13 +110,16 @@ function App() {
       }
     }
   
+    // Trims anything before first "{"
+    if (json.includes("{")) {
+      json = json.slice(json.indexOf("{"));
+    }
+    else {
+      return "{}";
+    }
     // Ignore correct inputs
     if (json.trim().endsWith('}')) {
       return json;
-    }
-    // Empty inputs
-    if (json.trim() == "") {
-      return `{}`;
     }
   
     // Try to fix via adding on
@@ -134,7 +142,8 @@ function App() {
       const updateChatObjects = (message, responseText) => {
         // Convert to JSON
           // console.log(`INPUT: ${responseText}`);
-        responseText = fixJSON(responseText);
+          responseText = fixJSON(responseText);
+          console.log(responseText);
           // console.log(`OUTPUT: ${responseText}`);
         const responseJSON = JSON.parse(responseText);
         // Separate response components
