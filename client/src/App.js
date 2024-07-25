@@ -42,6 +42,8 @@ function App() {
   // State variables
   // Current input
   const [prompt, setPrompt] = useState("");
+  // Input is enbaled or disabled
+  const [promptEnabled, setPromptEnabled] = useState(true);
   // All previous chat messages
   const [chatMessages, setChatMessages] = useState([{
     type: "output-message",
@@ -195,6 +197,9 @@ function App() {
             });
           }
         }
+      })
+      .on('end', () => {
+        setPromptEnabled(true);
       });
 
       setThread(thread);
@@ -219,6 +224,9 @@ function App() {
     // Clear message from input box
     setPrompt("");
     setAnswerOptions([]);
+    setPromptEnabled(false); // temporarily disable prompt textbox
+
+    // Add to chat history
     setChatMessages([
       createMessageObject(cleanMessage, true),
       ...chatMessages,
@@ -274,6 +282,7 @@ function App() {
       {/* Input */}
       <input
         id='prompt-input'
+        disabled={!promptEnabled}
         autoFocus
         onKeyDown={handleKeyDown}
         placeholder='Enter prompt here...'
