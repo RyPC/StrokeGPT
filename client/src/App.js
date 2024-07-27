@@ -26,6 +26,21 @@ const anonymizeMessage = async (message) => {
   return "";
 };
 
+const decodeMessage = async (message) => {
+  if (message === "") {
+    return "";
+  }
+  // construct url for get request
+  const getURL = "http://localhost:3001/api/decode/" + encodeURIComponent(message);
+
+  // Fetch response from server
+  const response = await axios.get(getURL);
+  if (response) {
+    return response.data.message;
+  }
+  return "";
+}
+
 const getInstructions = async () => {
   // construct url for get request
   const getURL = "http://localhost:3001/api/instructions";
@@ -139,17 +154,16 @@ function App() {
   }
 
   // Makes a call to OpenAI API
-  const getChatResponse = async (message) => {
+  const getChatResponse = async (message, cleanMessage) => {
     try {
-      const updateChatObjects = (message, responseText) => {
+      const updateChatObjects = async (message, responseText) => {
         // Convert to JSON
-          // console.log(`INPUT: ${responseText}`);
-          responseText = fixJSON(responseText);
-          console.log(responseText);
-          // console.log(`OUTPUT: ${responseText}`);
+        responseText = fixJSON(responseText);
+        console.log(responseText);
         const responseJSON = JSON.parse(responseText);
+
         // Separate response components
-        const responseMessage = responseJSON["response"] || "";
+        const responseMessage = await decodeMessage(responseJSON["response"] || "");
         const answers = responseJSON["answers"] || [];
         const user_info = responseJSON["user_info"] || "";
         console.log(user_info);
@@ -167,7 +181,7 @@ function App() {
         thread.id,
         {
           role: "user",
-          content: message
+          content: cleanMessage
         }
       );
 
@@ -228,12 +242,12 @@ function App() {
 
     // Add to chat history
     setChatMessages([
-      createMessageObject(cleanMessage, true),
+      createMessageObject(message, true),
       ...chatMessages,
     ]);
 
     // Get response from OpenAI
-    const response = await getChatResponse(cleanMessage);
+    const response = await getChatResponse(message, cleanMessage);
 
   };
   

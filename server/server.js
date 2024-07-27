@@ -4,7 +4,9 @@ const cors = require('cors');
 const compromise = require('compromise');
 require("dotenv").config();
 const OpenAI = require('openai');
-const FileSystem = require('fs');
+const fs = require('fs');
+const fsPromises = require('fs/promises');
+const crypto = require('crypto');
 
 
 // Setting up server
@@ -13,6 +15,8 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+const CRYPTO_SECRET_KEY = process.env.CRYPTO_SECRET_KEY;
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const openai = new OpenAI({
@@ -41,21 +45,69 @@ function redactPersonalInfo(message) {
   // Financial information
   // Medical records
 
-  const personalInfo = ["Person" /* < Name */, "PhoneNumber", "Place", "Email"];
+  // Match the following info
+  const personalInfo = ["Person", "PhoneNumber", "Place", "Email"];
+  let regex = "(#" + personalInfo.join("+|#") + "+)";
+  const matches = doc.match(regex).out('array');
 
-  for (const category of personalInfo) {
-    doc.match(`#${category}+`).replaceWith(`[REDACTED ${category}]`);
-  }
+  // Encrypt sensitive info
+  matches.forEach((info) => {
+    // Hash info
+    const hash = crypto.createHash("sha256", CRYPTO_SECRET_KEY);
+    hash.update(info);
+    doc.match(info).replaceWith(`[[${hash.digest("hex")}]]`);
+
+    // Save info to file
+    fs.appendFile('info.txt', `${info}\n`, (err) => {
+      if (err) {
+          console.error('Error appending to file info.txt:', err);
+          return;
+      }
+    });
+  });
 
   return doc.text();
 }
 
+async function decodePersonalInfo(message) {
+  // Retrieve sensitive info from file
+  let sensitiveInfo = [];
+  async function readFileData() {
+    try {
+      const data = await fsPromises.readFile('info.txt', 'utf8');
+      sensitiveInfo = data.trim().split("\n");
+    } catch (err) {
+      console.error('Error reading from file:', err);
+    }
+  }
+  
+  await readFileData();
+
+  // Replace encrypted info with sensitive
+  const doc = compromise(message);
+  sensitiveInfo.forEach((info) => {
+    // Hash sensitive info
+    const hash = crypto.createHash("sha256", CRYPTO_SECRET_KEY);
+    hash.update(info);
+    const digest = hash.digest("hex");
+
+    //Replace with actual info
+    message = message.replaceAll(`[[${digest}]]`, info);
+  });
+  
+  return message;
+}
+
 app.get("/api/redact/:message", (req, res) => {
-  res.send({message: redactPersonalInfo(req.params.message)});
+  res.json({message: redactPersonalInfo(req.params.message)});
+});
+
+app.get("/api/decode/:message", async (req, res) => {
+  res.json({message: await decodePersonalInfo(req.params.message)});
 });
 
 app.get("/api/instructions", (req, res) => {
-  const instructions = FileSystem.readFileSync('instructions.txt', 'utf8');
+  const instructions = fs.readFileSync('instructions.txt', 'utf8');
   res.send(instructions);
 });
 
@@ -71,7 +123,7 @@ app.get("/api/chat/:message", async (req, res) => {
     // Create assistant
     const assistant = await openai.beta.assistants.create({
       name: "StrokeGPT",
-      instructions: FileSystem.readFileSync('instructions.txt', 'utf8'),
+      instructions: fs.readFileSync('instructions.txt', 'utf8'),
       model: "gpt-4o-mini",
       // response_format: { "type": "json_object" },
       tools: [{ type: "file_search" }],
