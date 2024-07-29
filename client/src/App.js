@@ -13,6 +13,9 @@ const openai = new OpenAI({
 });
 
 const INITIAL_MESSAGE = `{"response": "How can I assist you today?", "answers": ["What is a stroke?", "I have a specific question about stoke", "I want to talk a bit"]} `;
+
+// API calls to localhost 3001
+
 // Remove any sensitive information before sending to OpenAI
 const anonymizeMessage = async (message) => {
   // construct url for get request
@@ -26,6 +29,7 @@ const anonymizeMessage = async (message) => {
   return "";
 };
 
+// Retrieves any sensitive info to put back in message
 const decodeMessage = async (message) => {
   if (message === "") {
     return "";
@@ -41,6 +45,7 @@ const decodeMessage = async (message) => {
   return "";
 }
 
+// Gets instructions from server/instructions.txt
 const getInstructions = async () => {
   // construct url for get request
   const getURL = "http://localhost:3001/api/instructions";
@@ -159,14 +164,12 @@ function App() {
       const updateChatObjects = async (message, responseText) => {
         // Convert to JSON
         responseText = fixJSON(responseText);
-        console.log(responseText);
         const responseJSON = JSON.parse(responseText);
 
         // Separate response components
         const responseMessage = await decodeMessage(responseJSON["response"] || "");
         const answers = responseJSON["answers"] || [];
         const user_info = responseJSON["user_info"] || "";
-        console.log(user_info);
 
         // Update chat messages (streaming)
         setChatMessages([
@@ -214,12 +217,13 @@ function App() {
       })
       .on('end', () => {
         setPromptEnabled(true);
+        console.log(responseText);
       });
 
       setThread(thread);
     }
     catch (err) {
-        console.error(err);
+      console.error(err);
     }
   };
 
@@ -234,6 +238,7 @@ function App() {
   const handleSubmitForm = async (message) => {
     // Clean message of personal information
     const cleanMessage = await anonymizeMessage(message)
+    console.log(cleanMessage);
 
     // Clear message from input box
     setPrompt("");

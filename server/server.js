@@ -6,7 +6,7 @@ require("dotenv").config();
 const OpenAI = require('openai');
 const fs = require('fs');
 const fsPromises = require('fs/promises');
-const crypto = require('crypto');
+const crypto = require('crypto-js');
 
 
 // Setting up server
@@ -33,7 +33,7 @@ app.listen(PORT, () => {
 
 
 // Uses Comprise API to remove any personal information
-function redactPersonalInfo(message) {
+function encryptPersonalInfo(message) {
   const doc = compromise(message);
 
   // Full name
@@ -47,63 +47,49 @@ function redactPersonalInfo(message) {
 
   // Match the following info
   const personalInfo = ["Person", "PhoneNumber", "Place", "Email"];
-  let regex = "(#" + personalInfo.join("+|#") + "+)";
+  const regex = "(#" + personalInfo.join("+|#") + "+)";
   const matches = doc.match(regex).out('array');
 
   // Encrypt sensitive info
   matches.forEach((info) => {
-    // Hash info
-    const hash = crypto.createHash("sha256", CRYPTO_SECRET_KEY);
-    hash.update(info);
-    doc.match(info).replaceWith(`[[${hash.digest("hex")}]]`);
-
-    // Save info to file
-    fs.appendFile('info.txt', `${info}\n`, (err) => {
-      if (err) {
-          console.error('Error appending to file info.txt:', err);
-          return;
-      }
-    });
+    const encryption = crypto.AES.encrypt(info, CRYPTO_SECRET_KEY).toString();
+    doc.match(info).replaceWith(`[[${encryption}]]`);
   });
 
   return doc.text();
 }
 
-async function decodePersonalInfo(message) {
-  // Retrieve sensitive info from file
-  let sensitiveInfo = [];
-  async function readFileData() {
-    try {
-      const data = await fsPromises.readFile('info.txt', 'utf8');
-      sensitiveInfo = data.trim().split("\n");
-    } catch (err) {
-      console.error('Error reading from file:', err);
-    }
-  }
-  
-  await readFileData();
-
-  // Replace encrypted info with sensitive
+async function decryptPersonalInfo(message) {
   const doc = compromise(message);
-  sensitiveInfo.forEach((info) => {
-    // Hash sensitive info
-    const hash = crypto.createHash("sha256", CRYPTO_SECRET_KEY);
-    hash.update(info);
-    const digest = hash.digest("hex");
 
-    //Replace with actual info
-    message = message.replaceAll(`[[${digest}]]`, info);
+  // Match any [[...]]
+  const regex = /\[\[([^\[\]]*)\]\]/g;
+  const matches = [...message.matchAll(regex)].map(answer => answer[1]);
+  console.log(matches);
+
+  // Decrypt sensitive info
+  matches.forEach((encryptedInfo) => {
+    const decryption = crypto.AES.decrypt(encryptedInfo, CRYPTO_SECRET_KEY).toString(crypto.enc.Utf8);
+    console.log(`[[${encryptedInfo}]]`);
+    console.log("into")
+    console.log(decryption + "\n");
+    doc.match(`[[${encryptedInfo}]]`).replaceWith(decryption);
+    message = (
+      message.substring(0, message.indexOf("[[")) +   // text before info
+      decryption +                                    // info to insert
+      message.substring(message.indexOf("]]") + 2)        // text after info
+    );
   });
   
   return message;
 }
 
 app.get("/api/redact/:message", (req, res) => {
-  res.json({message: redactPersonalInfo(req.params.message)});
+  res.json({message: encryptPersonalInfo(req.params.message)});
 });
 
 app.get("/api/decode/:message", async (req, res) => {
-  res.json({message: await decodePersonalInfo(req.params.message)});
+  res.json({message: await decryptPersonalInfo(req.params.message)});
 });
 
 app.get("/api/instructions", (req, res) => {
