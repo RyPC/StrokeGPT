@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './App.css';
+// import './App.css';
 
 
-function Login() {
+function PageNotFound() {
   return (
     <div>
       <h1>
-        PAGE NOT FOUND
+        404 Error: Page Not Found
       </h1>
     </div>
   );
 }
 
-export default Login;
+export default PageNotFound;

@@ -5,7 +5,6 @@ const compromise = require('compromise');
 require("dotenv").config();
 const OpenAI = require('openai');
 const fs = require('fs');
-const fsPromises = require('fs/promises');
 const crypto = require('crypto-js');
 
 
